@@ -2,6 +2,7 @@
 #define ANUNCIO_H
 #include <cstddef>
 #include <cstring>
+#include <cctype>
 class Anuncio {
 private:
     char* mensaje;
