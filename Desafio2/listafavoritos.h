@@ -1,16 +1,31 @@
-#include "ListaFavoritos.h"
-#include "Usuario.h"
-#include "Cancion.h"
-#include "SistemaReproduccion.h"
-static Cancion** ensureCapImpl(Cancion** arr,int& cap,int need){
-    if(need<=cap) return arr; int nueva=(cap>0)?cap*2:4; if(nueva<need) nueva=need;
-    Cancion** v=new Cancion*[nueva]; for(int i=0;i<cap;++i) v[i]=arr?arr[i]:0; for(int i=cap;i<nueva;++i) v[i]=0;
-    delete[] arr; cap=nueva; return v; }
-Cancion** ListaFavoritos::ensureCap(Cancion** arr,int& cap,int need){ return ensureCapImpl(arr,cap,need); }
-bool ListaFavoritos::contiene(Cancion* c) const{ for(int i=0;i<len;++i) if(items[i]==c) return true; return false; }
-ListaFavoritos::ListaFavoritos(Usuario* u):propietario(u),items(0),len(0),cap(0) {}
-ListaFavoritos::~ListaFavoritos(){ delete[] items; items=0; len=cap=0; }
-void ListaFavoritos::setPropietario(Usuario* u){ propietario=u; } Usuario* ListaFavoritos::getPropietario() const{ return propietario; }
-void ListaFavoritos::agregarCancion(Cancion* c){ if(!c) return; if(contiene(c)) return; items=ensureCap(items,cap,len+1); items[len++]=c; }
-int ListaFavoritos::getLen()const{ return len; } Cancion** ListaFavoritos::getVector()const{ return items; }
-void ListaFavoritos::reproducirLista(bool /*aleatorio*/, SistemaReproduccion* player){ if(!player || len<=0) return; for(int i=0;i<len;++i) if(items[i]) player->reproducir(items[i]); }
+
+#pragma once
+// ----------- no incluyas Usuario.h ni Cancion.h aquí -----------
+class Usuario;            // forward declarations
+class Cancion;
+class SistemaReproduccion;
+// ---------------------------------------------------------------
+
+class ListaFavoritos {
+private:
+    Usuario* propietario;
+    Cancion** items;
+    int len;
+    int cap;
+
+    static Cancion** ensureCap(Cancion** arr, int& cap, int need);
+    bool contiene(Cancion* c) const;
+
+public:
+    explicit ListaFavoritos(Usuario* u = nullptr);
+    ~ListaFavoritos();
+
+    void setPropietario(Usuario* u);
+    Usuario* getPropietario() const;
+
+    void agregarCancion(Cancion* c);
+    int  getLen() const;
+    Cancion** getVector() const;
+
+    void reproducirLista(bool aleatorio, SistemaReproduccion* player);
+};

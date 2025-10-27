@@ -128,7 +128,7 @@ int main() {
             int L = fav.getLen();
             std::cout << "Mi Lista de Favoritos (" << L << ")\n";
             for (int i = 0; i < L; ++i) {
-                Cancion* c = fav.getItems()[i];
+                Cancion* c = fav.getVector()[i];
                 if (c) { player.reproducir(c); pausa3s(); }
             }
 
@@ -144,7 +144,7 @@ int main() {
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
 
             Cancion* c = app.encontrarCancion(id);
-            if (c) { fav.agregar(c); std::cout << "Agregada.\n"; }
+            if (c) { fav.agregarCancion(c); std::cout << "Agregada.\n"; }
             else   { std::cout << "No encontrada.\n"; }
 
         } else if (op == 4 && premium) {
