@@ -7,43 +7,136 @@
 #include "SistemaReproduccion.h"
 #include "MedidorRecursos.h"
 #include <cstdlib>
-Plataforma::Plataforma():usuarios(0),numUsuarios(0),capUsuarios(0),catalogoArtistas(0),numArtistas(0),capArtistas(0),
-    anuncios(0),numAnuncios(0),capAnuncios(0),player(0),medidor(0){}
+#include <cstring>
+#include <cctype>   // toupper
+
+Plataforma::Plataforma()
+    : usuarios(nullptr), numUsuarios(0), capUsuarios(0),
+    catalogoArtistas(nullptr), numArtistas(0), capArtistas(0),
+    anuncios(nullptr), numAnuncios(0), capAnuncios(0),
+    player(nullptr), medidor(nullptr) {}
+
 Plataforma::~Plataforma() {
     delete[] usuarios;
     delete[] catalogoArtistas;
     delete[] anuncios;
 
-    usuarios = nullptr;          // <- en líneas separadas
-    catalogoArtistas = nullptr;  //    para no mezclar tipos
+    usuarios = nullptr;
+    catalogoArtistas = nullptr;
     anuncios = nullptr;
 
     numUsuarios = numArtistas = numAnuncios = 0;
     capUsuarios = capArtistas = capAnuncios = 0;
 }
-void Plataforma::setSistemaReproduccion(SistemaReproduccion* p){ player=p; } void Plataforma::setMedidor(MedidorRecursos* m){ medidor=m; }
-void Plataforma::agregarUsuario(Usuario* u){ usuarios=ensureCap(usuarios,capUsuarios,numUsuarios+1); usuarios[numUsuarios++]=u; }
-void Plataforma::agregarArtista(Artista* a){ catalogoArtistas=ensureCap(catalogoArtistas,capArtistas,numArtistas+1); catalogoArtistas[numArtistas++]=a; }
-void Plataforma::agregarAnuncio(Anuncio* a){ anuncios=ensureCap(anuncios,capAnuncios,numAnuncios+1); anuncios[numAnuncios++]=a; }
+
+void Plataforma::setSistemaReproduccion(SistemaReproduccion* p){ player = p; }
+void Plataforma::setMedidor(MedidorRecursos* m){ medidor = m; }
+
+void Plataforma::agregarUsuario(Usuario* u){
+    usuarios = ensureCap(usuarios, capUsuarios, numUsuarios + 1);
+    usuarios[numUsuarios++] = u;
+}
+
+void Plataforma::agregarArtista(Artista* a){
+    catalogoArtistas = ensureCap(catalogoArtistas, capArtistas, numArtistas + 1);
+    catalogoArtistas[numArtistas++] = a;
+}
+
+void Plataforma::agregarAnuncio(Anuncio* a){
+    anuncios = ensureCap(anuncios, capAnuncios, numAnuncios + 1);
+    anuncios[numAnuncios++] = a;
+}
+
 void Plataforma::reproducirAleatorio(){
     if(!player || numArtistas<=0) return;
-    int idxA = (numArtistas==1)?0: (std::rand()%numArtistas);
+
+    int idxA = (numArtistas==1)? 0 : (std::rand()%numArtistas);
     Artista* art = catalogoArtistas[idxA]; if(!art) return;
-    Album** albv = art->getAlbumes(); int nA = art->getLenAlbums(); if(!albv||nA<=0) return;
-    int idxB = (nA==1)?0: (std::rand()%nA);
+
+    Album** albv = art->getAlbumes(); int nA = art->getLenAlbums(); if(!albv || nA<=0) return;
+    int idxB = (nA==1)? 0 : (std::rand()%nA);
+
     Album* alb = albv[idxB]; if(!alb) return;
-    Cancion** tracks = alb->getCanciones(); int nT = alb->getLenPistas(); if(!tracks||nT<=0) return;
-    int idxC = (nT==1)?0: (std::rand()%nT);
+
+    Cancion** tracks = alb->getCanciones(); int nT = alb->getLenPistas(); if(!tracks || nT<=0) return;
+    int idxC = (nT==1)? 0 : (std::rand()%nT);
+
     player->reproducir(tracks[idxC]);
 }
+
 Cancion* Plataforma::encontrarCancion(int id){
     for(int i=0;i<numArtistas;++i){
-        Artista* art=catalogoArtistas[i]; if(!art) continue;
-        Album** albv = art->getAlbumes(); int nA=art->getLenAlbums();
+        Artista* art = catalogoArtistas[i]; if(!art) continue;
+        Album** albv = art->getAlbumes(); int nA = art->getLenAlbums();
         for(int j=0; albv && j<nA; ++j){
             Cancion** tr = albv[j]->getCanciones(); int nT = albv[j]->getLenPistas();
-            for(int k=0; tr && k<nT; ++k){ Cancion* c=tr[k]; if(c && c->getIdCancion()==id) return c; }
+            for(int k=0; tr && k<nT; ++k){
+                Cancion* c = tr[k];
+                if(c && c->getIdCancion()==id) return c;
+            }
         }
     }
-    return 0;
+    return nullptr;
+}
+
+// Busca un usuario por nickname (si no usas password, ignóralo)
+Usuario* Plataforma::login(const char* nick, const char* /*pass*/){
+    for(int i=0;i<numUsuarios;++i){
+        if (usuarios[i] && usuarios[i]->getUsuario()
+            && std::strcmp(usuarios[i]->getUsuario(), nick)==0){
+            return usuarios[i];
+        }
+    }
+    return nullptr;
+}
+
+// Ponderación AAA:3, B:2, C/otros:1 usando el primer carácter de la categoría
+static int pesoPorCategoria(const char* cat) {
+    if (!cat || !*cat) return 1;
+    char f = static_cast<char>(std::toupper(static_cast<unsigned char>(cat[0])));
+    if (f == 'A') return 3; // "AAA"
+    if (f == 'B') return 2;
+    return 1;               // "C" u otra
+}
+
+Anuncio* Plataforma::elegirAnuncio(){
+    if (numAnuncios <= 0) return nullptr;
+
+    int total = 0;
+    for (int i=0; i<numAnuncios; ++i){
+        const char* cat = anuncios[i]->getCategoria();
+        total += pesoPorCategoria(cat);
+    }
+
+    int r = (std::rand() % total) + 1;
+    int acum = 0;
+    for (int i=0; i<numAnuncios; ++i){
+        const char* cat = anuncios[i]->getCategoria();
+        int w = pesoPorCategoria(cat);
+        acum += w;
+        if (r <= acum) return anuncios[i];
+    }
+    return anuncios[0];
+}
+
+// Busca artista por id
+Artista* Plataforma::encontrarArtista(int id){
+    for (int i=0; i<numArtistas; ++i){
+        if (catalogoArtistas[i] && catalogoArtistas[i]->getIdArtista() == id)
+            return catalogoArtistas[i];
+    }
+    return nullptr;
+}
+
+// Busca album por artista_id y album_id
+Album* Plataforma::encontrarAlbum(int artista_id, int album_id){
+    Artista* art = encontrarArtista(artista_id);
+    if (!art) return nullptr;
+
+    int nA = art->getLenAlbums();
+    Album** albs = art->getAlbumes();
+    for (int j=0; j<nA; ++j){
+        if (albs[j] && albs[j]->getIdAlbum() == album_id) return albs[j];
+    }
+    return nullptr;
 }

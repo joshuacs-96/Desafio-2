@@ -9,12 +9,12 @@ SOURCES += \
         artista.cpp \
         cancion.cpp \
         credito.cpp \
+        io.cpp \
         listafavoritos.cpp \
-        main.cpp \
         medidorrecursos.cpp \
+        mian.cpp \
         plataforma.cpp \
         sistemareproduccion.cpp \
-        udeatunes.cpp \
         usuario.cpp
 
 HEADERS += \
@@ -23,9 +23,9 @@ HEADERS += \
     artista.h \
     cancion.h \
     credito.h \
+    io.h \
     listafavoritos.h \
     medidorrecursos.h \
     plataforma.h \
     sistemareproduccion.h \
-    udeatunes.h \
     usuario.h

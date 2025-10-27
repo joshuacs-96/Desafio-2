@@ -1,0 +1,12 @@
+debug/album.o
+debug/anuncio.o
+debug/artista.o
+debug/cancion.o
+debug/credito.o
+debug/io.o
+debug/listafavoritos.o
+debug/medidorrecursos.o
+debug/mian.o
+debug/plataforma.o
+debug/sistemareproduccion.o
+debug/usuario.o

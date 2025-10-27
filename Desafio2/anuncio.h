@@ -1,35 +1,37 @@
-#ifndef ANUNCIO_H
-#define ANUNCIO_H
+#pragma once
 #include <cstddef>
-#include <cstring>
-#include <cctype>
+
 class Anuncio {
 private:
-    char* mensaje;
-    char* nivel;
-    int   peso;
+    char* mensaje;   // texto del anuncio
+    char* nivel;     // "AAA", "B", "C"
+    int   peso;      // prioridad calculada
     bool  flagUltimo;
-    static int toLower(int ch){ return (ch>='A'&&ch<='Z')? ch-'A'+'a' : ch; }
-    static bool eqCI(const char* a,const char* b){
-        if(!a||!b) return false; while(*a && *b){ if(toLower(*a)!=toLower(*b)) return false; ++a; ++b; } return (*a==0 && *b==0);
-    }
-    static char* clonar(const char* s){ if(!s) return 0; size_t n=std::strlen(s); char* p=new char[n+1]; std::strcpy(p,s); return p; }
-    static void  reasignar(char*& d,const char* s){ delete[] d; d=clonar(s); }
+
+    // helpers de manejo de cadenas
+    static char* clonar(const char* s);
+    static void  reasignar(char*& dst, const char* src);
+    static bool  eqCI(const char* a, const char* b); // case-insensitive
+
 public:
     Anuncio();
     Anuncio(const char* texto, const char* categoria);
     Anuncio(const Anuncio& o);
     Anuncio& operator=(const Anuncio& o);
     ~Anuncio();
-    void        setTexto(const char* texto);
+
+    void        setTexto(const char* t);
     const char* getTexto() const;
-    void        setCategoria(const char* categoria);
+
+    void        setCategoria(const char* c);
     const char* getCategoria() const;
-    void        setPrioridad(int prioridad);
+
+    void        setPrioridad(int p);
     int         getPrioridad() const;
-    void        setUltimoMostrado(bool ultimo);
+
+    void        setUltimoMostrado(bool u);
     bool        getUltimoMostrado() const;
-    int calcularPrioridad();
-    void mostrarAnuncio();
+
+    int         calcularPrioridad(); // actualiza 'peso' según 'nivel'
+    void        mostrarAnuncio();
 };
-#endif
