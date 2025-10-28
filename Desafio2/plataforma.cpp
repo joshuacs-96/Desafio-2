@@ -50,18 +50,60 @@ void Plataforma::agregarAnuncio(Anuncio* a){
 void Plataforma::reproducirAleatorio(){
     if(!player || numArtistas<=0) return;
 
-    int idxA = (numArtistas==1)? 0 : (std::rand()%numArtistas);
-    Artista* art = catalogoArtistas[idxA]; if(!art) return;
+    const int K = 5;
+    Cancion* ultima = nullptr;
 
-    Album** albv = art->getAlbumes(); int nA = art->getLenAlbums(); if(!albv || nA<=0) return;
-    int idxB = (nA==1)? 0 : (std::rand()%nA);
+    for(int step=0; step<K; ++step){
+        // Elegir artista
+        int idxA = (numArtistas==1)? 0 : (std::rand()%numArtistas);
+        Artista* art = catalogoArtistas[idxA];
+        if(!art) continue;
 
-    Album* alb = albv[idxB]; if(!alb) return;
+        // Elegir álbum
+        Album** albv = art->getAlbumes();
+        int nA = art->getLenAlbums();
+        if(!albv || nA<=0) continue;
+        int idxB = (nA==1)? 0 : (std::rand()%nA);
 
-    Cancion** tracks = alb->getCanciones(); int nT = alb->getLenPistas(); if(!tracks || nT<=0) return;
-    int idxC = (nT==1)? 0 : (std::rand()%nT);
+        Album* alb = albv[idxB];
+        if(!alb) continue;
 
-    player->reproducir(tracks[idxC]);
+        // Elegir pista
+        Cancion** tracks = alb->getCanciones();
+        int nT = alb->getLenPistas();
+        if(!tracks || nT<=0) continue;
+
+        // Evitar repetir la última pista
+        int intentos = 0;
+        int idxC = (nT==1)? 0 : (std::rand()%nT);
+        while (nT>1 && tracks[idxC]==ultima && intentos<6){
+            idxC = std::rand()%nT;
+            ++intentos;
+        }
+
+        Cancion* c = tracks[idxC];
+        if(!c) continue;
+
+        // Reproducir
+        player->reproducir(c);
+        ultima = c;
+    }
+
+    // Al terminar K reproducciones, actualizar métricas si hay medidor.
+    if(medidor){
+        // sumar 1 iteración de funcionalidad
+        medidor->setIteraciones( medidor->getIteraciones() + 1 );
+
+        // calcular memoria aproximada de toda la plataforma
+        if constexpr (true) { // solo para que quede claro que es intencional
+            // Si ya agregaste memoriaAproximada() (ver sección 2), úsalo:
+            size_t m = this->memoriaAproximada();
+            medidor->setMemoriaTotal(m);
+        }
+
+        medidor->mostrarMetricas("Reproduccion Aleatoria");
+        medidor->reset();
+    }
 }
 
 Cancion* Plataforma::encontrarCancion(int id){
@@ -100,23 +142,37 @@ static int pesoPorCategoria(const char* cat) {
 }
 
 Anuncio* Plataforma::elegirAnuncio(){
-    if (numAnuncios <= 0) return nullptr;
+    if(numAnuncios<=0) return nullptr;
 
+    // calcular pesos (AAA=3, B=2, C=1). Ya tienes peso en Anuncio; si no, calcula aquí.
     int total = 0;
-    for (int i=0; i<numAnuncios; ++i){
-        const char* cat = anuncios[i]->getCategoria();
-        total += pesoPorCategoria(cat);
+    for(int i=0;i<numAnuncios;++i){
+        if(anuncios[i] && !anuncios[i]->getUltimoMostrado()){
+            total += anuncios[i]->getPrioridad();
+        }
+    }
+    if(total==0){
+        // si todos fueron el último, reinicia la marca y vuelve a sumar
+        for(int i=0;i<numAnuncios;++i) if(anuncios[i]) anuncios[i]->setUltimoMostrado(false);
+        for(int i=0;i<numAnuncios;++i) if(anuncios[i]) total += anuncios[i]->getPrioridad();
+        if(total==0) return nullptr;
     }
 
-    int r = (std::rand() % total) + 1;
-    int acum = 0;
-    for (int i=0; i<numAnuncios; ++i){
-        const char* cat = anuncios[i]->getCategoria();
-        int w = pesoPorCategoria(cat);
-        acum += w;
-        if (r <= acum) return anuncios[i];
+    int r = std::rand()%total, acum=0, pick=-1;
+    for(int i=0;i<numAnuncios;++i){
+        if(!anuncios[i]) continue;
+        int w = anuncios[i]->getPrioridad();
+        if(!anuncios[i]->getUltimoMostrado()){
+            if(r < acum + w){ pick = i; break; }
+            acum += w;
+        }
     }
-    return anuncios[0];
+    if(pick<0) pick=0;
+
+    // marcar anti-repetición
+    for(int i=0;i<numAnuncios;++i) if(anuncios[i]) anuncios[i]->setUltimoMostrado(false);
+    anuncios[pick]->setUltimoMostrado(true);
+    return anuncios[pick];
 }
 
 // Busca artista por id
@@ -139,4 +195,41 @@ Album* Plataforma::encontrarAlbum(int artista_id, int album_id){
         if (albs[j] && albs[j]->getIdAlbum() == album_id) return albs[j];
     }
     return nullptr;
+}
+size_t Plataforma::memoriaAproximada() const{
+    size_t total = 0;
+
+    total += sizeof(*this);
+    total += sizeof(Usuario*)  * (size_t)capUsuarios;
+    total += sizeof(Artista*)  * (size_t)capArtistas;
+    total += sizeof(Anuncio*)  * (size_t)capAnuncios;
+
+    for(int i=0;i<numUsuarios;++i){
+        if(usuarios[i]) total += sizeof(*usuarios[i]);
+    }
+
+    for(int i=0;i<numArtistas;++i){
+        Artista* a = catalogoArtistas[i];
+        if(!a) continue;
+        total += sizeof(*a);
+        total += sizeof(Album*) * (size_t)a->getCapAlbums();
+
+        Album** albs = a->getAlbumes();
+        for(int j=0; j<a->getLenAlbums(); ++j){
+            Album* alb = albs[j];
+            if(!alb) continue;
+            total += sizeof(*alb);
+            total += sizeof(Cancion*) * (size_t)alb->getCapPistas();
+
+            Cancion** cs = alb->getCanciones();
+            for(int k=0; k<alb->getLenPistas(); ++k){
+                if(cs[k]) total += sizeof(*cs[k]);
+            }
+        }
+    }
+
+    for(int i=0;i<numAnuncios;++i){
+        if(anuncios[i]) total += sizeof(*anuncios[i]);
+    }
+    return total;
 }

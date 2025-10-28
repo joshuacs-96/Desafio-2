@@ -1,0 +1,12 @@
+release/album.o
+release/anuncio.o
+release/artista.o
+release/cancion.o
+release/credito.o
+release/io.o
+release/listafavoritos.o
+release/medidorrecursos.o
+release/mian.o
+release/plataforma.o
+release/sistemareproduccion.o
+release/usuario.o

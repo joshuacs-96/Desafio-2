@@ -3,7 +3,7 @@
 #include <chrono>
 #include <thread>
 #include <limits>
-
+#include <filesystem>
 #include "Plataforma.h"
 #include "Usuario.h"
 #include "ListaFavoritos.h"
@@ -60,17 +60,32 @@ int main() {
     Plataforma app;
 
     app.setSistemaReproduccion(&player);
+    player.setMaxHistorial(6);
     app.setMedidor(&monitor);
 
-    // --- Cargar CSVs ---
-    const char* dataDir = "data";  // carpeta con los archivos CSV
-    char path[1024];
+    auto cargarTodo = [&](const char* base) {
+        char path[1024];
+        bool ok = true;
 
-    pathJoin(dataDir, "usuarios.csv",  path, sizeof(path));  cargarUsuarios(path, app);
-    pathJoin(dataDir, "artistas.csv",  path, sizeof(path));  cargarArtistas(path, app);
-    pathJoin(dataDir, "albums.csv",    path, sizeof(path));  cargarAlbums(path, app);
-    pathJoin(dataDir, "canciones.csv", path, sizeof(path));  cargarCanciones(path, app);
-    pathJoin(dataDir, "anuncios.csv",  path, sizeof(path));  cargarAnuncios(path, app);
+        pathJoin(base, "usuarios.csv",  path, sizeof(path)); ok &= cargarUsuarios(path, app);
+        pathJoin(base, "artistas.csv",  path, sizeof(path)); ok &= cargarArtistas(path, app);
+        pathJoin(base, "albums.csv",    path, sizeof(path)); ok &= cargarAlbums(path, app);
+        pathJoin(base, "canciones.csv", path, sizeof(path)); ok &= cargarCanciones(path, app);
+        pathJoin(base, "anuncios.csv",  path, sizeof(path)); ok &= cargarAnuncios(path, app);
+
+        return ok;
+    };
+
+    const char* bases[] = {"Data","data",".","..","../Data","../data"};
+    bool cargado = false;
+    for (const char* b : bases) {
+        if (cargarTodo(b)) {
+            const std::string rutaAbsolutaEspecifica =
+                "D:/Udea 3/Info 2/Teorica/PRACTICA 2/Codigo/Desafio2/build/Desktop_Qt_6_9_2_MinGW_64_bit-Debug/debug/debug/data";
+            std::cout << "[OK] Datos desde: " << b << "\n"; cargado = true; break; }
+
+    }
+    if (!cargado) { std::cout << "[ERROR] No pude cargar CSVs.\n"; return 0; }
 
     // --- Login ---
     std::string nick, pass;
@@ -148,7 +163,24 @@ int main() {
             else   { std::cout << "No encontrada.\n"; }
 
         } else if (op == 4 && premium) {
-            std::cout << "(Demo) Seguir otra lista: por implementar.\n";
+            std::cout << "Nickname del usuario a seguir: ";
+            std::string otro;
+            std::getline(std::cin, otro);
+            if(otro.empty()) std::getline(std::cin, otro);
+
+            Usuario* u2 = app.login(otro.c_str(), ""); // ignora pass
+            if(!u2 || !u2->Premium() || !u2->getListaFavoritos() || u2==activo){
+                std::cout << "No es posible seguir esa lista.\n";
+            } else {
+                ListaFavoritos* lf2 = u2->getListaFavoritos();
+                if(lf2 && lf2->getLen()>0){
+                    Cancion** vec = lf2->getVector();
+                    for(int i=0;i<lf2->getLen();++i) if(vec[i]) fav.agregarCancion(vec[i]);
+                    std::cout << "Listas combinadas. (" << fav.getLen() << " canciones)\n";
+                } else {
+                    std::cout << "La lista destino está vacía.\n";
+                }
+            }
         } else {
             std::cout << "Opcion invalida.\n";
         }

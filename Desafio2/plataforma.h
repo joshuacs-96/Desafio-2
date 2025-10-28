@@ -1,5 +1,6 @@
 #ifndef PLATAFORMA_H
 #define PLATAFORMA_H
+#include <cstddef>
 class Usuario;
 class Artista;
 class Anuncio;
@@ -45,5 +46,9 @@ public:
     Anuncio* elegirAnuncio();
     Artista* encontrarArtista(int id);
     Album* encontrarAlbum(int artista_id, int album_id);
+    size_t memoriaAproximada() const;
+    int getNumUsuarios() const { return numUsuarios; }
+    int getNumArtistas() const { return numArtistas; }
+    int getNumAnuncios() const { return numAnuncios; }
 };
 #endif

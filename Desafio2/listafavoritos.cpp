@@ -1,6 +1,7 @@
 #include "ListaFavoritos.h"
 #include "Usuario.h"
 #include "Cancion.h"
+#include <cstdlib>
 #include "SistemaReproduccion.h"
 
 static Cancion** ensureCapImpl(Cancion** arr, int& cap, int need) {
@@ -47,9 +48,18 @@ void ListaFavoritos::agregarCancion(Cancion* c) {
 int ListaFavoritos::getLen() const { return len; }
 Cancion** ListaFavoritos::getVector() const { return items; }
 
-void ListaFavoritos::reproducirLista(bool /*aleatorio*/, SistemaReproduccion* player) {
-    if (!player || len <= 0) return;
-    for (int i = 0; i < len; ++i)
-        if (items[i])
-            player->reproducir(items[i]);
+void ListaFavoritos::reproducirLista(bool aleatorio, SistemaReproduccion* player){
+    if(!player || len<=0) return;
+
+    if(!aleatorio){
+        for(int i=0;i<len;++i) if(items[i]) player->reproducir(items[i]);
+        return;
+    }
+
+    // aleatorio: barajado simple
+    for(int i=0;i<len-1;++i){
+        int j = i + (std::rand() % (len - i));
+        Cancion* tmp = items[i]; items[i] = items[j]; items[j] = tmp;
+    }
+    for(int i=0;i<len;++i) if(items[i]) player->reproducir(items[i]);
 }
